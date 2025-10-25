@@ -31,6 +31,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "@/config/firebase.config";
+import { deleteDoc } from "firebase/firestore";
 
 interface FormMockInterviewProps {
   initialData: Interview | null;
@@ -161,6 +162,30 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
     }
   };
 
+  const handleDelete = async () => {
+  if (!initialData) return;
+
+  const confirmDelete = window.confirm(
+    "Are you sure you want to delete this interview?"
+  );
+  if (!confirmDelete) return;
+
+  try {
+    setLoading(true);
+    await deleteDoc(doc(db, "interviews", initialData.id)); // delete from Firestore
+    toast("Deleted!", { description: "Interview has been deleted." });
+    navigate("/generate", { replace: true }); // go back to the list page
+  } catch (error) {
+    console.error("Error deleting interview:", error);
+    toast.error("Failed to delete interview.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+
   useEffect(() => {
     if (initialData) {
       form.reset({
@@ -183,11 +208,51 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
         <Headings title={title} isSubHeading />
 
         {initialData && (
-          <Button size={"icon"} variant={"ghost"}>
+          <Button size={"icon"} variant={"ghost"}     onClick={() => setIsConfirmOpen(true)}>
             <Trash2 className="min-w-4 min-h-4 text-red-500" />
           </Button>
         )}
       </div>
+
+      {isConfirmOpen && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+    <div className="bg-white rounded-lg p-6 w-80 shadow-lg">
+      <h2 className="text-lg font-bold text-gray-900 mb-2">
+        Delete Interview?
+      </h2>
+      <p className="text-gray-600 mb-4">
+        Are you sure you want to delete this interview? This action cannot be undone.
+      </p>
+      <div className="flex justify-end gap-3">
+        <button
+          className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100"
+          onClick={() => setIsConfirmOpen(false)}
+        >
+          Cancel
+        </button>
+        <button
+          className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600"
+          onClick={async () => {
+            setLoading(true);
+            try {
+              await deleteDoc(doc(db, "interviews", initialData.id));
+              toast("Deleted!", { description: "Interview has been deleted." });
+              navigate("/generate", { replace: true });
+            } catch (error) {
+              console.error(error);
+              toast.error("Failed to delete interview.");
+            } finally {
+              setLoading(false);
+              setIsConfirmOpen(false);
+            }
+          }}
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       <Separator className="my-4" />
 
